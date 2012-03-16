@@ -1,4 +1,4 @@
-modgen - Module Gnerator Program for Kicad PCBnew V0.0
+modgen - Module Generator Program for Kicad PCBnew V0.0
 ===========================================================
 
 This *Python & Tkinter* based GUI tool designed to create Modules

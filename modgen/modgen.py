@@ -2,7 +2,7 @@
 ############################################################################
 ############################################################################
 """
-##  modgen - Module Gnerator Program for Kicad PCBnew V0.0
+##  modgen - Module Generator Program for Kicad PCBnew V0.0
 ## 
 ##  Designed by
 ##         A.D.H.A.R Labs Research,Bharat(India)
@@ -297,7 +297,7 @@ if __name__ == "__main__" :
   print __doc__
   ## Create Main Window
   root = Tk()
-  root.title("Module Gnerator by A.D.H.A.R Labs Research,Bharat(India)")  
+  root.title("Module Generator by A.D.H.A.R Labs Research,Bharat(India)")  
   root.bind("<Escape>",lambda e:root.destroy())
   root["padx"]=10
   root["pady"]=10

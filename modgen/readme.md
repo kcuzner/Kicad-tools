@@ -22,8 +22,9 @@ Abhijit Bose [info@adharlabs.in](mailto:info@adharlabs.in)
 
 Version History
 ---------------
-version 0.0 - Initial Release (2012-02-08)
+version 0.0 - Initial Release (2012-03-16)
  *  Support for SIP Single Inline Connectors
+
 
 
 Limitation in Present Design

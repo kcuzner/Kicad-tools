@@ -19,10 +19,6 @@ Abhijit Bose [info@adharlabs.in](mailto:info@adharlabs.in)
 
 [http://adharlabs.in](http://adharlabs.in)
 
-Credits(Attribution)
---------------------
-Thanks to bifferos (bifferos@yahoo.co.uk) For his DIP Generator
-[Link](http://tech.groups.yahoo.com/group/kicad-users/files/DIP%20generation%20helper/)
 
 Version History
 ---------------

@@ -27,13 +27,11 @@ one must know how to use Module editor.
 
 ![Step 6](https://github.com/AdharLabs/Kicad-tools/raw/master/modgen/tut/modgen-tut6.png)
 
-## Step 7: PCBnew now has the Package and more packages from Module Editor can be added 
-to the same board. Then the board is saved in the `modules directory`
+## Step 7: PCBnew now has the Package and more packages from Module Editor can be added to the same board. Then the board is saved in the `modules directory`
 
 ![Step 7](https://github.com/AdharLabs/Kicad-tools/raw/master/modgen/tut/modgen-tut7.png)
 
-## Step 8: Now Export the Modules into a PCB Library file (.mod) to create 
-the usable library for PCB footprints
+## Step 8: Now Export the Modules into a PCB Library file (.mod) to create the usable library for PCB footprints
 
 ![Step 8](https://github.com/AdharLabs/Kicad-tools/raw/master/modgen/tut/modgen-tut8.png)
 

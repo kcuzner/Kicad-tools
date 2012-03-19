@@ -19,7 +19,7 @@
 ## version 0.0 - Initial Release (2012-03-16)
 ##          -- Support for Single Inline Connectors
 ## version 0.1 - Updated with mm to Mil Converter tool
-##
+##          -- Corrected the Error in Locking Silk screen
 ############################################################################
 ############################################################################
 #IMPORTS>
@@ -132,12 +132,14 @@ def MakePads_SIP(pins,meta):
       pin["shape"]="\"%s\" %s %d %d 0 0 0"%(p[0],meta["padshape"],\
           float(meta["padx"])*10,float(meta["pady"])*10)
     pin_str += template_pad%pin #Add the Pad
-  # Make Drawing
-  buf = (float(meta["padx"])+50)*10
-  X =x - pitch + buf
-  Y = buf
+  # Make Drawing  
+  buf = (max(float(meta["padx"]),float(meta["pady"]))+50)*10
+  X = x - pitch + buf
   mx = buf/-2
-  my = mx  
+  if(meta["locking"]!=None):#Add some margin for Locking
+    buf = buf + (int(meta["locking"])*2.0)
+  Y = buf #Increase Y Only  
+  my = buf/-2  
   drawing  = "DS %d %d %d %d 120 21"%(mx,my,mx+X,my)
   drawing += "\nDS %d %d %d %d 120 21"%(mx,my,mx,my+Y)
   drawing += "\nDS %d %d %d %d 120 21"%(mx,my+Y,mx+X,my+Y)

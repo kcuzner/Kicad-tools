@@ -53,7 +53,7 @@ Sc 00000000
 AR %(modname)s
 Op 0 0 0
 T0 0 -1000 600 600 0 120 N V 21 "%(refname)s"
-T1 0 -500 50 50 0 10 N I 21 "%(modname)s"
+T1 0 -500 50 50 0 10 N I 21 "VAL**"
 %(drawing)s
 %(pads)s
 $EndMODULE  %(modname)s

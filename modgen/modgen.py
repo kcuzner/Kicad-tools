@@ -2,7 +2,7 @@
 ############################################################################
 ############################################################################
 """
-##  modgen - Module Generator Program for Kicad PCBnew V0.0
+##  modgen - Module Generator Program for Kicad PCBnew V0.1
 ## 
 ##  Designed by
 ##         A.D.H.A.R Labs Research,Bharat(India)
@@ -18,6 +18,8 @@
 ## Version History:
 ## version 0.0 - Initial Release (2012-03-16)
 ##          -- Support for Single Inline Connectors
+## version 0.1 - Updated with mm to Mil Converter tool
+##
 ############################################################################
 ############################################################################
 #IMPORTS>
@@ -27,7 +29,7 @@ from Tkinter import *
 #EXPORT>
 __author__ = "Abhijit Bose(info@adharlabs.in)"
 __author_email__="info@adharlabs.in"
-__version__ = "0.0"
+__version__ = "0.1"
 ############################################################################    
 #DEBUG> Print Additional Debug Messages
 #  if needed make _debug_message = 1
@@ -301,9 +303,9 @@ if __name__ == "__main__" :
   root.bind("<Escape>",lambda e:root.destroy())
   root["padx"]=10
   root["pady"]=10
-  #  {
+  #  { MAIN CONTENT BEGIN
   content = Frame(root,width=300,height=200,borderwidth=2,relief="groove")
-  #    {
+  #    { DATAFRAME 1 BEGIN
   data_frm1 = Frame(content,width=200,height=200,borderwidth=3,\
                     relief="ridge",padx=2,pady=2)
   
@@ -404,29 +406,54 @@ if __name__ == "__main__" :
   Entry(data_frm1,textvar=keywords,width=20)\
           .grid(column=1,row=14,columnspan=2,padx=2,pady=2,sticky=N+W+E)
   
-  data_frm1.grid(column=0,row=0,columnspan=2,padx=5,pady=5)
-  #    }
-  #    {
+  data_frm1.grid(column=0,row=0,columnspan=2,rowspan=2,padx=5,pady=5)
+  #    } DATA FRAME 1 END
+  #    { DATA FRAME 2 BEGIN
   data_frm2 = Frame(content,width=200,height=200,borderwidth=3,\
                     relief="ridge",padx=2,pady=2)
   canvas = Canvas(data_frm2,width=200,height=200,background="white")
   canvas.pack(fill=BOTH)
   data_frm2.grid(column=2,row=0,columnspan=2,padx=5,pady=5,sticky=N+W+E)
-  #    }  
+  #    }  #DATA FRAME 2 END
+  #    { DATA FRAME 3 BEGIN
+  data_frm3 = Frame(content,width=200,height=200,borderwidth=3,\
+                    relief="ridge",padx=2,pady=2)
+  Label(data_frm3,text="mm to Mil Converter",justify="center")\
+          .grid(column=0,row=0,columnspan=3,padx=2,pady=2,sticky=N+E+W)
+  Label(data_frm3,text="mm")\
+          .grid(column=0,row=2,padx=2,pady=2,sticky=N+E)
+  mm=StringVar(value="0")
+  Entry(data_frm3,textvar=mm,width=10)\
+          .grid(column=1,row=2,padx=2,pady=2,sticky=N+W+E)
+  Label(data_frm3,text="mils")\
+          .grid(column=0,row=3,padx=2,pady=2,sticky=N+E)
+  mil=StringVar(value="0")
+  Entry(data_frm3,textvar=mil,width=10,state="readonly")\
+          .grid(column=1,row=3,padx=2,pady=2,sticky=N+W+E)
+  def handler(mm,mil):
+    try:
+      m = float(mm.get())*(1000/25.4)
+      mil.set("%f"%m)
+    except:
+      mm.set("0")
+      
+  Button(data_frm3,text="Convert",command=lambda:handler(mm,mil))\
+          .grid(column=3,row=2,padx=2,pady=2,sticky=N+W+E+S)
+    
+  data_frm3.grid(column=2,row=1,columnspan=2,padx=5,pady=5,sticky=N+W+E+S)
+  #    }  #DATA FRAME 3 END
   Button(content,text="Generate",width=10,command=packed)\
-                        .grid(column=2,row=1,padx=2)
+                        .grid(column=2,row=2,padx=2)
   Button(content,text="Exit",width=10,command=lambda:root.destroy())\
-                        .grid(column=3,row=1,padx=2)
+                        .grid(column=3,row=2,padx=2)
   status = StringVar(value="""Designed by: A.D.H.A.R Labs Research,Bharat(India)
 Abhijit Bose( info@adharlabs.in )
 http://m8051.blogspot.com""")
   Label(content,text="",textvariable=status)\
-        .grid(column=0,row=1,padx=2,columnspan=2,sticky=N+E+W+S)
+        .grid(column=0,row=2,padx=2,columnspan=2,sticky=N+E+W+S)
   
   content.grid(column=0,row=0,sticky=N+S+E+W)
   #  }
   ## Main Loop Start
   root.mainloop()
   #}
-
-

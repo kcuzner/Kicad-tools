@@ -23,8 +23,26 @@ Abhijit Bose [info@adharlabs.in](mailto:info@adharlabs.in)
 Version History
 ---------------
 version 0.0 - Initial Release (2012-03-16)
- *  Support for SIP Single Inline Connectors
 
+ *    Support for SIP Single Inline Connectors
+
+
+version 0.1 - (2012-03-18)
+
+ *   Updated with mm to Mil Converter tool
+
+ *   Corrected the Error in Locking Silk screen
+
+
+version 0.2 - (2012-03-23)
+
+ *   Added Mil to mm and viz. Option
+
+ *   Added Check for Oblong pads
+
+ *   GUI Reorganized
+
+ *   Added Auto Name Generation
 
 
 Limitation in Present Design

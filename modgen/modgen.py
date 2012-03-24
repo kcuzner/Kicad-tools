@@ -2,7 +2,7 @@
 ############################################################################
 ############################################################################
 """
-##  modgen - Module Generator Program for Kicad PCBnew V0.2
+##  modgen - Module Generator Program for Kicad PCBnew V0.3
 ## 
 ##  Designed by
 ##         A.D.H.A.R Labs Research,Bharat(India)
@@ -26,22 +26,38 @@
 ##          -- Added Check for Oblong pads
 ##          -- GUI Reorganized
 ##          -- Added Auto Name Generation
+## version 0.3 - (2012-03-24)
+##          -- Corrected SMD Pad Mask
+##          -- Added DIP & CONN-Dual Package Support
+##          -- Added Quad Package support with variable pin structure
+##          -- Logical GUI Re-arrangements and improvements
+##          -- Custom value Population using Package type selection
+##          -- Automatic Picture Dispay for Package & Configurations
+##
+## TODO:
+## - Automatic Name Generation
+## - Add Lib Gen Capability
+##
 ############################################################################
 ############################################################################
 #IMPORTS>
+############################################################################
 import xml.dom.minidom,re,sys,os,ttk,tkMessageBox
 from Tkinter import *
 ############################################################################
 #EXPORT>
+############################################################################
 __author__ = "Abhijit Bose(info@adharlabs.in)"
 __author_email__="info@adharlabs.in"
-__version__ = "0.2"
+__version__ = "0.3"
 ############################################################################    
 #DEBUG> Print Additional Debug Messages
 #  if needed make _debug_message = 1
-_debug_message = 0
+############################################################################
+_debug_message = 1
 ############################################################################
 #FORMAT>Lib
+############################################################################
 template_pcb = """PCBNEW-LibModule-V1  07-02-2012 08:54:12
 # encoding utf-8
 $INDEX
@@ -58,7 +74,7 @@ Kw %(keywords)s
 Sc 00000000
 AR %(modname)s
 Op 0 0 0
-T0 0 -1000 600 600 0 120 N V 21 "%(refname)s"
+T0 0 %(modref_y)s 600 600 0 120 N V 21 "%(refname)s"
 T1 0 -500 50 50 0 10 N I 21 "VAL**"
 %(drawing)s
 %(pads)s
@@ -77,6 +93,7 @@ Po %(pinx)s %(piny)s
 $EndPAD"""
 ############################################################################
 #FORMAT FUNCTIONS>
+############################################################################
 def PinDescriptions(comp):
   "Read in the pin descriptions as a list"
   el = xmlcomp.getElementsByTagName("module")[0]
@@ -91,15 +108,15 @@ def PinDescriptions(comp):
   #Get the Pin names & Modes
   bits = [ i.split(',') for i in bits]
   return bits
-
+############################################################################
 def PinGen(numb):
   "Generate Pin Numbers if No pin Description is available using PIN"
   bits = []
   for i in range(1,numb+1):
-    bits.append([str(i)])
+    bits.append(str(i))
   #print bits
   return bits
-
+############################################################################
 def MetaData(comp):
   "Extract the component description parameters (common to all pins)"
   el = comp.getElementsByTagName("module")[0]
@@ -107,7 +124,7 @@ def MetaData(comp):
   for name, value in el.attributes.items() :
     d[name] = value
   return d
-
+############################################################################
 def MakePads_SIP(pins,meta):
   """To Make the Pads and draw outline for SIP Connector"""
   pin_str = ""
@@ -129,7 +146,7 @@ def MakePads_SIP(pins,meta):
     pin["pinx"]="%d"%(x)
     x = x + pitch
     pin["padtype"]=meta["padtype"]
-    pin["layermask"]='00E0FFFF' #normally for STD
+    pin["layermask"]=meta["padlayermask"]
     pin["drill"]="%d 0 0"%(int(float(meta["paddrill"])*10))
     if(x==pitch and meta["firstpadsquare"]!= None):
       pin["shape"]="\"%s\" %s %d %d 0 0 0"%(p[0],"R",\
@@ -151,14 +168,203 @@ def MakePads_SIP(pins,meta):
   drawing += "\nDS %d %d %d %d 120 21"%(mx,my+Y,mx+X,my+Y)
   drawing += "\nDS %d %d %d %d 120 21"%(mx+X,my,mx+X,my+Y)
   meta["drawing"]=drawing
+  meta["modref_y"]="-1000"
   return pin_str
-
+############################################################################
+def MakePads_DIP(pins,meta):
+  """To Make the Pads and draw outline for DIP Package"""
+  pin_str = ""
+  x = 0
+  y = 0
+  pin = {}
+  pitch = float(meta["pitch"]) * 10
+  #Set First Half of the Pins
+  for i in range(0,len(pins)/2):
+    pin["piny"]="%d"%(y)
+    pin["pinx"]="%d"%(x)
+    y = y + pitch
+    pin["padtype"]=meta["padtype"]
+    pin["layermask"]=meta["padlayermask"]
+    pin["drill"]="%d 0 0"%(int(float(meta["paddrill"])*10))
+    if(x==pitch and meta["firstpadsquare"]!= None):
+      pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],"R",\
+          float(meta["padx"])*10,float(meta["pady"])*10)
+    else:
+      pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],meta["padshape"],\
+          float(meta["padx"])*10,float(meta["pady"])*10)
+    pin_str += template_pad%pin #Add the Pad
+  #Increment the Next Row
+  x = float(meta["rowx"])*10
+  y = y - pitch
+  #Set Second Half of the Pins
+  for i in range(len(pins)/2,len(pins)):
+    pin["piny"]="%d"%(y)
+    pin["pinx"]="%d"%(x)
+    y = y - pitch
+    pin["padtype"]=meta["padtype"]
+    pin["layermask"]=meta["padlayermask"]
+    pin["drill"]="%d 0 0"%(int(float(meta["paddrill"])*10))
+    pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],meta["padshape"],\
+          float(meta["padx"])*10,float(meta["pady"])*10)
+    pin_str += template_pad%pin #Add the Pad
+  # Make Drawing  
+  bufx = (float(meta["padx"])+100+float(meta["rowx"]))*10
+  bufy = ((float(meta["pitch"])*(len(pins)-2)/2.0)\
+          +100+float(meta["pady"]))*10
+  X = bufx
+  mx = ((float(meta["padx"])/-2.0)-50)*10
+  Y = bufy
+  my = ((float(meta["pady"])/-2.0)-50)*10
+  drawing  = "DS %d %d %d %d 120 21"%(mx,my,mx+X,my)
+  drawing += "\nDS %d %d %d %d 120 21"%(mx,my,mx,Y+my)
+  drawing += "\nDS %d %d %d %d 120 21"%(mx,Y+my,mx+X,Y+my)
+  drawing += "\nDS %d %d %d %d 120 21"%(mx+X,my,mx+X,Y+my)
+  drawing += "\nDC %d %d %d %d 120 21"%(mx-500,0,mx-200,0)
+  meta["drawing"]=drawing
+  meta["modref_y"]="-1500"
+  return pin_str
+############################################################################
+def MakePads_CONN_Dual(pins,meta):
+  """ To Make the Pads and draw outline for Dual row Connector """
+  pin_str = ""
+  x = 0
+  y = 0
+  pin = {}
+  pitch = float(meta["pitch"]) * 10
+  for i in range(0,len(pins)):
+    pin["piny"]="%d"%(y)
+    pin["pinx"]="%d"%(x)
+    if (i&1)==0:#Next Even Pin
+      x = float(meta["rowx"])*10      
+    else:#Next Odd Pin
+      x = 0
+      y = y + pitch
+    pin["padtype"]=meta["padtype"]
+    pin["layermask"]=meta["padlayermask"]
+    pin["drill"]="%d 0 0"%(int(float(meta["paddrill"])*10))
+    if(i == 0 and meta["firstpadsquare"]!= None):
+      pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],"R",\
+          float(meta["padx"])*10,float(meta["pady"])*10)
+    else:
+      pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],meta["padshape"],\
+          float(meta["padx"])*10,float(meta["pady"])*10)
+    pin_str += template_pad%pin #Add the Pad
+  # Make Drawing  
+  bufx = (float(meta["padx"])+100+float(meta["rowx"]))*10
+  bufy = ((float(meta["pitch"])*(len(pins)-2)/2.0)\
+          +100+float(meta["pady"]))*10
+  X = bufx
+  mx = ((float(meta["padx"])/-2.0)-50)*10
+  Y = bufy
+  my = ((float(meta["pady"])/-2.0)-50)*10
+  drawing  = "DS %d %d %d %d 120 21"%(mx,my,mx+X,my)
+  drawing += "\nDS %d %d %d %d 120 21"%(mx,my,mx,Y+my)
+  drawing += "\nDS %d %d %d %d 120 21"%(mx,Y+my,mx+X,Y+my)
+  drawing += "\nDS %d %d %d %d 120 21"%(mx+X,my,mx+X,Y+my)
+  drawing += "\nDC %d %d %d %d 120 21"%(mx-500,0,mx-200,0)
+  meta["drawing"]=drawing
+  meta["modref_y"]="-1500"
+  return pin_str
+############################################################################
+def MakePads_QUAD(pins,meta):
+  """To Make the Pads and draw outline for Quad Package"""
+  pin_str = ""  
+  pitch = float(meta["pitch"]) * 10  
+  pin = {}  
+  #Make the Left side
+  x = (float(meta["rowx"])/-2.0)*10 
+  y = (pitch*(int(meta["PIN_N_HORIZ"]))/-2.0)+(pitch/2.0)
+  b = 0
+  n = int(meta["PIN_N_HORIZ"])
+  for i in range(b,n):
+    pin["piny"]="%d"%(y)
+    pin["pinx"]="%d"%(x)
+    y = y + pitch
+    pin["padtype"]=meta["padtype"]
+    pin["layermask"]=meta["padlayermask"]
+    pin["drill"]="%d 0 0"%(int(float(meta["paddrill"])*10))
+    if(i == 0 and meta["firstpadsquare"]!= None):
+      pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],"R",\
+          float(meta["padx"])*10,float(meta["pady"])*10)
+    else:
+      pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],meta["padshape"],\
+          float(meta["padx"])*10,float(meta["pady"])*10)
+    pin_str += template_pad%pin #Add the Pad
+  #Make the Bottom side
+  x = ((pitch*(int(meta["PIN_N_VERT"])))/-2.0)+(pitch/2.0)
+  y = (float(meta["rowy"])/2.0)*10
+  b = int(meta["PIN_N_HORIZ"])
+  n = int(meta["PIN_N_HORIZ"])+int(meta["PIN_N_VERT"])
+  for i in range(b,n):
+    pin["piny"]="%d"%(y)
+    pin["pinx"]="%d"%(x)
+    x = x + pitch
+    pin["padtype"]=meta["padtype"]
+    pin["layermask"]=meta["padlayermask"]
+    pin["drill"]="%d 0 0"%(int(float(meta["paddrill"])*10))
+    pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],meta["padshape"],\
+        float(meta["pady"])*10,float(meta["padx"])*10)
+    pin_str += template_pad%pin #Add the Pad
+  #Make the Right side
+  x = (float(meta["rowx"])/2.0)*10 
+  y = (pitch*(int(meta["PIN_N_HORIZ"]))/2.0)-(pitch/2.0)
+  b = int(meta["PIN_N_HORIZ"])+int(meta["PIN_N_VERT"])
+  n = (int(meta["PIN_N_HORIZ"])*2)+int(meta["PIN_N_VERT"])
+  for i in range(b,n):
+    pin["piny"]="%d"%(y)
+    pin["pinx"]="%d"%(x)
+    y = y - pitch
+    pin["padtype"]=meta["padtype"]
+    pin["layermask"]=meta["padlayermask"]
+    pin["drill"]="%d 0 0"%(int(float(meta["paddrill"])*10))
+    pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],meta["padshape"],\
+          float(meta["padx"])*10,float(meta["pady"])*10)
+    pin_str += template_pad%pin #Add the Pad
+  #Make the Top side
+  x = (pitch*(int(meta["PIN_N_VERT"]))/2.0)-(pitch/2.0)
+  y = (float(meta["rowy"])/-2.0)*10
+  b = (int(meta["PIN_N_HORIZ"])*2)+int(meta["PIN_N_VERT"])
+  n = int(meta["PIN_N"])
+  for i in range(b,n):
+    pin["piny"]="%d"%(y)
+    pin["pinx"]="%d"%(x)
+    x = x - pitch
+    pin["padtype"]=meta["padtype"]
+    pin["layermask"]=meta["padlayermask"]
+    pin["drill"]="%d 0 0"%(int(float(meta["paddrill"])*10))
+    pin["shape"]="\"%s\" %s %d %d 0 0 0"%(pins[i],meta["padshape"],\
+        float(meta["pady"])*10,float(meta["padx"])*10)
+    pin_str += template_pad%pin #Add the Pad
+  # Make Drawing
+  mx = ((float(meta["rowx"])/-2.0)-(float(meta["padx"])/2.0)-50)*10
+  my = ((float(meta["rowy"])/-2.0)-(float(meta["padx"])/2.0)-50)*10
+  X = -mx  
+  Y = -my
+  meta["modref_y"] = "%d"%(my - 500)
+  drawing  = "DS %d %d %d %d 120 21"%(mx+500,my,X,my)
+  drawing += "\nDS %d %d %d %d 120 21"%(mx,my+500,mx,Y)
+  drawing += "\nDS %d %d %d %d 120 21"%(mx,Y,X,Y)
+  drawing += "\nDS %d %d %d %d 120 21"%(X,my,X,Y)
+  drawing += "\nDS %d %d %d %d 120 21"%(mx,my+500,mx+500,my)
+  my = (pitch*(int(meta["PIN_N_HORIZ"]))/-2.0)+(pitch/2.0)
+  drawing += "\nDC %d %d %d %d 120 21"%(mx-800,my,mx-600,my+200)
+  meta["drawing"]=drawing
+  return pin_str
+############################################################################  
 def MakePads(pins,meta):
   """Convert the Pins into a string of Pad data and add Drawing"""
   if meta["package"]=='SIP':
     return MakePads_SIP(pins,meta)
+  elif meta["package"]=='DIP':
+    return MakePads_DIP(pins,meta)
+  elif meta["package"]=='CONN-Dual':
+    return MakePads_CONN_Dual(pins,meta)
+  elif meta["package"]=='QUAD':
+    return MakePads_QUAD(pins,meta)
   print "Error: Un Supported Package"
   exit(0)
+############################################################################
+#GUI FUNCTIONS>
 ############################################################################
 def Validate():
   """To Validate the GUI Inputs"""
@@ -210,11 +416,13 @@ def Validate():
   try:
     k = float(paddrill.get())*1.0
     er = "ok"
-    if(k<=10 or k>250):
+    if(k<=10 or k>250) and padtype.get()=='STD':
       tkMessageBox.showerror("Error","Invalid Pad Drill Value")        
       er = "paddrill"
       paddrill.set("35")
       return 1
+    #elif padtype.get()=='SMD':#Allow Even Drils if needed
+    #  paddrill.set("0")
   except:    
     tkMessageBox.showerror("Error","Invalid Pad Drill Value")        
     er = "paddrill"
@@ -229,10 +437,54 @@ def Validate():
       er = "PIN_N"
       PIN_N.set("8")
       return 1
+    if (k%2)!=0 and (package.get() in ['DIP','CONN-Dual']):
+      tkMessageBox.showerror("Error","Invalid Number of Pins")        
+      er = "PIN_N"
+      PIN_N.set("8")
+      return 1
   except:    
     tkMessageBox.showerror("Error","Invalid Number of Pins")        
     er = "PIN_N"
     PIN_N.set("8")
+    return 1
+  # Check Row X
+  try:
+    k = float(rowx.get())*1
+    er = "ok"
+    if (k<=0) and (package.get() in ['DIP','CONN-Dual']):
+      tkMessageBox.showerror("Error","Invalid Row X Spacing")        
+      er = "RowX"
+      rowx.set("10")
+      return 1
+  except:    
+    tkMessageBox.showerror("Error","Invalid Row X Spacing")        
+    er = "RowX"
+    return 1
+  # Check Row Y
+  try:
+    k = float(rowy.get())*1
+    er = "ok"
+    if (k<=0) and (package.get() in ['QUAD']):
+      tkMessageBox.showerror("Error","Invalid Row Y Spacing")        
+      er = "RowY"
+      rowy.set("10")
+      return 1
+  except:    
+    tkMessageBox.showerror("Error","Invalid Row Y Spacing")        
+    er = "RowY"
+    return 1
+  # Check PIN_N_HORIZ
+  try:
+    k = int(PIN_N_HORIZ.get())*1
+    er = "ok"
+    if (k<=0) and (package.get() in ['QUAD']):
+      tkMessageBox.showerror("Error","Invalid Number of Pins Horizontally")        
+      er = "PIN_N_HORIZ"
+      PIN_N_HORIZ.set("%d"%(int(PIN_N.get())/4))
+      return 1
+  except:    
+    tkMessageBox.showerror("Error","Invalid Number of Pins Horizontally")        
+    er = "PIN_N_HORIZ"
     return 1
   #Check The Description
   if(len(description.get())==0):
@@ -241,7 +493,7 @@ def Validate():
   if(len(keywords.get())==0):
     keywords.set(modname.get())  
   #Check the Oblong Selection PadY>Padx
-  if(float(padx.get())>=float(pady.get())) and padshape.get()=='O':
+  if(float(padx.get())==float(pady.get())) and padshape.get()=='O':
     tkMessageBox.showerror("Error","Incorrect Pad Dimensions for Oblong pads")
     er = "Oblong Pad Shape"
     return 1
@@ -253,7 +505,7 @@ def Validate():
     return 1
   #At the End Return
   return 1
-
+############################################################################
 def packed():
   """To Pack the GUI inputs to the XML form"""
   Validate()  
@@ -282,6 +534,10 @@ def packed():
   meta["locking"] = "5" if locking.get() else None
   print "Pad Type: " + padtype.get()
   meta["padtype"] = padtype.get()
+  if padtype.get() == 'STD':
+    meta["padlayermask"]='00E0FFFF' #normally for STD 
+  else:
+    meta["padlayermask"]='00888000' #notmally for SMD
   print "Number of Pins: " + PIN_N.get()
   meta["PIN_N"] = PIN_N.get()
   pins = PinGen(int(meta["PIN_N"]))
@@ -289,11 +545,28 @@ def packed():
   meta["description"] = description.get()
   print "Keywords for Module: " + keywords.get()
   meta["keywords"] = keywords.get()
+  if meta["package"] in ['DIP','CONN-Dual','QUAD']:
+    print "Pin Row Spacing X:" + rowx.get()
+    meta["rowx"] = rowx.get()
+  else:
+    meta["rowx"] = None
+  if meta["package"] =='QUAD':
+    print "Pin Row Spacing Y:" + rowy.get()
+    meta["rowy"] = rowy.get()
+    print "Number of Pins Horizontally: " + PIN_N_HORIZ.get()
+    meta["PIN_N_HORIZ"] = PIN_N_HORIZ.get()
+    meta["PIN_N_VERT"] = "%d"%(\
+      (int(PIN_N.get())-(int(PIN_N_HORIZ.get())*2))/2)
+    print "Number of Pins Vertically: " + meta["PIN_N_VERT"]
+  else:
+    meta["rowy"] = None
+    meta["PIN_N_HORIZ"] = None
+    meta["PIN_N_VERT"] = None
 
   meta["pads"]=MakePads(pins,meta)
   print template_pcb%meta
   name = meta["modname"]
-  if(locking.get()):
+  if(locking.get()) and package.get() == 'SIP':
     name = name+"_LOCK"
   name = name+".emp"
   ans = tkMessageBox.askokcancel("File Wite",\
@@ -306,20 +579,321 @@ def packed():
       "Module "+meta["modname"]+" Written Successfully!!")
     print " Module "+name+" written successfully"
   return 1
+############################################################################
+def draw():
+  canvas.delete("all")
+  if package.get() == 'SIP':
+    canvas.create_rectangle(40,40,160,80,width=3)
+    #First Pad
+    x = 55
+    y = 55
+    if locking.get() == False:
+      xy = x,y,x+10,y+10
+      if firstpinsquare.get():
+        canvas.create_rectangle(xy,width=5)
+      else:
+        canvas.create_oval(xy,width=5)
+      canvas.create_text(x+5,30,text="1",fill="red")
+      #Further pads
+      for i in range(0,4):
+        x = x + 20
+        xy = x,y,x+10,y+10
+        canvas.create_oval(xy,width=5)
+        canvas.create_text(x+5,30,text="%d"%(i+2),fill="red")
+      #Pitch
+      canvas.create_line(60,60,60,100,width=2,fill='red')
+      canvas.create_line(80,60,80,100,width=2,fill='red')
+      canvas.create_line(40,90,60,90,width=2,arrow=LAST,fill='blue')
+      canvas.create_line(80,90,100,90,width=2,arrow=FIRST,fill='blue')
+      canvas.create_text(70,110,text="Pitch",font=("Arial",10,"bold"),\
+                         fill="blue")
+    else: #LOcked SIP type
+      l=1
+      for i in range(0,5):
+        l = 1 if l==0 else 0
+        if l == 0:
+          xy = x,y+5,x+10,y+15
+        else:
+          xy = x,y-5,x+10,y+5
+        x = x + 20
+        if i==0 and firstpinsquare.get():
+          canvas.create_rectangle(xy,width=5)
+        else:
+          canvas.create_oval(xy,width=5)
+        canvas.create_text(x-15,30,text="%d"%(i+1),fill="red")
+      #Pitch
+      canvas.create_line(60,65,60,100,width=2,fill='red')
+      canvas.create_line(80,55,80,100,width=2,fill='red')
+      canvas.create_line(40,90,60,90,width=2,arrow=LAST,fill='blue')
+      canvas.create_line(80,90,100,90,width=2,arrow=FIRST,fill='blue')
+      canvas.create_text(70,110,text="Pitch",font=("Arial",10,"bold"),\
+                         fill="blue")
+      #Lock
+      canvas.create_line(20,65,60,65,width=2,fill='red')
+      canvas.create_line(20,55,80,55,width=2,fill='red')
+      canvas.create_line(30,35,30,55,width=2,arrow=LAST,fill='blue')
+      canvas.create_line(30,90,30,65,width=2,arrow=LAST,fill='blue')
+      canvas.create_text(30,30,text="Lock",font=("Arial",10,"bold"),\
+                         fill="blue")
+  elif package.get() == 'DIP':
+    canvas.create_rectangle(60,30,160,100,width=3)
+    xy = 40,40,50,50
+    canvas.create_oval(xy,width=3)
+    xy = 100,20,120,40
+    canvas.create_arc(xy,start=180,extent=180,width=3)
+    #First Set
+    x = 70
+    y = 40
+    for i in range(0,3):
+      xy = x,y,x+30,y+10
+      y = y + 20
+      canvas.create_oval(xy,width=5)
+      canvas.create_text(x-50,y-20,text="%d"%(i+1),fill="red")
+    #Second Set
+    x = 120
+    y = 40
+    for i in range(0,3):
+      xy = x,y,x+30,y+10
+      y = y + 20
+      canvas.create_oval(xy,width=5)
+      canvas.create_text(x+50,y-20,text="%d"%(6-i),fill="red")
+    #Pitch
+    canvas.create_line(30,65,90,65,width=2,fill='red')
+    canvas.create_line(30,85,90,85,width=2,fill='red')
+    canvas.create_line(30,50,30,65,width=2,arrow=LAST,fill='blue')
+    canvas.create_line(30,85,30,100,width=2,arrow=FIRST,fill='blue')
+    canvas.create_text(40,75,text="Pitch",font=("Arial",10,"bold"),\
+                       fill="blue")
+    #Row X
+    canvas.create_line(85,20,85,45,width=2,fill='red')
+    canvas.create_line(135,20,135,45,width=2,fill='red')
+    canvas.create_line(85,20,135,20,width=2,arrow=BOTH,fill='blue')
+    canvas.create_text(110,10,text="Row Spacing X",font=("Arial",10,"bold"),\
+                       fill="blue")
 
+  elif package.get() == 'CONN-Dual':
+    canvas.create_rectangle(60,30,110,100,width=3)
+    xy = 40,40,50,50
+    canvas.create_oval(xy,width=3)
+    #First Set
+    x = 70
+    y = 40
+    k = 1
+    for i in range(0,3):
+      xy = x,y,x+10,y+10
+      y = y + 20
+      if i==0 and firstpinsquare.get():
+        canvas.create_rectangle(xy,width=5)
+      else:
+        canvas.create_oval(xy,width=5)
+      canvas.create_text(x-50,y-20,text="%d"%(k),fill="red")
+      k = k + 2
+    #Second Set
+    x = 90
+    y = 40
+    k = 2
+    for i in range(0,3):
+      xy = x,y,x+10,y+10
+      y = y + 20
+      canvas.create_oval(xy,width=5)
+      canvas.create_text(x+30,y-20,text="%d"%(k),fill="red")
+      k = k + 2
+    #Pitch
+    canvas.create_line(30,65,75,65,width=2,fill='red')
+    canvas.create_line(30,85,75,85,width=2,fill='red')
+    canvas.create_line(30,50,30,65,width=2,arrow=LAST,fill='blue')
+    canvas.create_line(30,85,30,100,width=2,arrow=FIRST,fill='blue')
+    canvas.create_text(40,75,text="Pitch",font=("Arial",10,"bold"),\
+                       fill="blue")
+    #Row X
+    canvas.create_line(75,20,75,45,width=2,fill='red')
+    canvas.create_line(95,20,95,45,width=2,fill='red')
+    canvas.create_line(40,20,75,20,width=2,arrow=LAST,fill='blue')
+    canvas.create_line(95,20,130,20,width=2,arrow=FIRST,fill='blue')
+    canvas.create_text(85,10,text="Row Spacing X",font=("Arial",10,"bold"),\
+                       fill="blue")
+  elif package.get() == 'QUAD':
+    x = 50
+    y = 40
+    dx = 120
+    dy = 120
+    canvas.create_polygon(\
+      x,y+20,x+20,y,x+dx,y,x+dx,y+dy,x,y+dy,fill="white",width=2,outline="black")
+    xy = x-20,y+40,x-10,y+30
+    canvas.create_oval(xy,width=2)
+    #Left
+    ox = x + 10
+    oy = y + 35
+    for i in range(1,5):
+      xy = ox,oy,ox+20,oy+5
+      canvas.create_rectangle(xy,fill="black")
+      canvas.create_text(ox-50,oy+5,text="%d"%(i),fill="red")
+      oy = oy + 15
+    #Bottom
+    ox = x + 35
+    oy = y + + dy - 10
+    for i in range(5,9):
+      xy = ox,oy,ox+5,oy-20
+      canvas.create_rectangle(xy,fill="black")
+      canvas.create_text(ox+5,oy+15,text="%d"%(i),fill="red")
+      ox = ox + 15
+    #Right
+    ox = x + dx - 10
+    oy = y + dy - 35
+    for i in range(9,13):
+      xy = ox,oy,ox-20,oy-5
+      canvas.create_rectangle(xy,fill="black")
+      canvas.create_text(ox+30,oy-5,text="%d"%(i),fill="red")
+      oy = oy - 15
+    #Top
+    ox = x + dx - 35
+    oy = y + 30
+    for i in range(13,17):
+      xy = ox,oy,ox-5,oy-20
+      canvas.create_rectangle(xy,fill="black")
+      canvas.create_text(ox-5,oy-50,text="%d"%(i),fill="red")
+      ox = ox - 15
+    #Pitch
+    canvas.create_line(x+20,y+52,x+50,y+52,fill='red')
+    canvas.create_line(x+20,y+68,x+50,y+68,fill='red')
+    canvas.create_line(x+50,y+40,x+50,y+52,arrow=LAST,fill='blue')
+    canvas.create_line(x+50,y+68,x+50,y+80,arrow=FIRST,fill='blue')
+    canvas.create_text(x+60,y+62,text="Pitch",fill="blue")
+    #Row X
+    canvas.create_line(x+20,y+dy-36,x+20,y+dy+30,fill='red')
+    canvas.create_line(x+dx-20,y+dy-36,x+dx-20,y+dy+30,fill='red')
+    canvas.create_line(x+20,y+dy+30,x+dx-20,y+dy+30,arrow=BOTH,fill='blue')
+    canvas.create_text(x+60,y+dy+20,text="Row Spacing X",fill="blue")
+    #Row Y
+    canvas.create_line(x-30,y+20,x+35,y+20,fill='red')
+    canvas.create_line(x-30,y+dy-20,x+35,y+dy-20,fill='red')
+    canvas.create_line(x-25,y+20,x-25,y+dy-20,arrow=BOTH,fill='blue')
+    canvas.create_text(x-25,y+dy-10,text="Row",fill="blue")
+    canvas.create_text(x-25,y+dy,text="Spacing",fill="blue")
+    canvas.create_text(x-25,y+dy+10,text="Y",fill="blue")
+    #Pin Horiz
+    ox = x - 35
+    oy = y + 25
+    canvas.create_line(ox,oy,ox-20,oy,fill='red')
+    canvas.create_line(ox,oy,ox,oy+70,fill='red')
+    canvas.create_line(ox,oy+70,ox-20,oy+70,fill='red')
+    canvas.create_line(ox+10,oy-35,ox,oy,arrow=LAST,fill='blue')
+    canvas.create_text(ox+20,oy-55,text="No. of Pins",fill="blue")
+    canvas.create_text(ox+20,oy-45,text="Horizontally",fill="blue")
+    
+  #Pad Generic
+  if package.get() in ['SIP','DIP','CONN-Dual']:     
+    xy = 100+6,140+6,140-6,180-6
+    canvas.create_oval(xy,width=12)
+    canvas.create_line(60,140,120,140,width=2,fill='red')
+    canvas.create_line(60,180,120,180,width=2,fill='red')
+    canvas.create_line(80,140,80,180,width=2,arrow=BOTH,fill='blue')
+    canvas.create_text(50,160,text="Pad Y",font=("Arial",10,"bold"),\
+                       fill="blue")
+    canvas.create_line(100,120,100,160,width=2,fill='red')
+    canvas.create_line(140,120,140,160,width=2,fill='red')
+    canvas.create_line(100,130,140,130,width=2,arrow=BOTH,fill='blue')
+    canvas.create_text(120,115,text="Pad X",font=("Arial",10,"bold"),\
+                       fill="blue")
+    canvas.create_line(110,150,130,170,width=2,arrow=BOTH,fill='red')
+    canvas.create_line(130,170,150,190,width=2,fill='red')
+    canvas.create_line(150,190,190,190,width=2,fill='red')
+    canvas.create_text(170,175,text="Drill Dia",font=("Arial",10,"bold"),\
+                       fill="blue")
+  canvas.update()
+############################################################################  
+def package_cmb_update(event):
+  """To Update Options when the Screen is Activated"""
+  if package.get() == 'SIP':
+     rowx_di()
+     rowy_di()
+     PIN_N_HORIZ_di()
+     modname.set('CONN')
+     refdes.set('J')
+     PIN_N.set('8')
+     pitch.set('100')
+     padx.set('70')
+     pady.set('70')
+     paddrill.set('35')
+     padshape.set('C')
+     firstpinsquare.set(True)
+     locking.set(False)
+     padtype.set('STD')     
+  elif package.get() == 'DIP':
+     rowx_en()     
+     rowy_di()
+     PIN_N_HORIZ_di()
+     modname.set('DIP')
+     refdes.set('U')
+     PIN_N.set('8')
+     pitch.set('100')
+     padx.set('150')
+     pady.set('60')
+     paddrill.set('39.37')
+     rowx.set(value="100")
+     padshape.set('O')
+     firstpinsquare.set(False)
+     locking.set(False)
+     padtype.set('STD')     
+  elif package.get() == 'CONN-Dual':
+     rowx_en()
+     rowy_di()
+     PIN_N_HORIZ_di()
+     modname.set('CONN2X')
+     refdes.set('J')
+     PIN_N.set('16')
+     pitch.set('100')
+     padx.set('70')
+     pady.set('70')
+     paddrill.set('35')
+     rowx.set(value="100")
+     padshape.set('C')
+     firstpinsquare.set(False)
+     locking.set(False)
+     padtype.set('STD')
+  elif package.get() == 'QUAD':
+     rowx_en()
+     rowy_en()     
+     PIN_N_HORIZ_en()
+     modname.set('QUAD')
+     refdes.set('U')
+     PIN_N.set('32')
+     PIN_N_HORIZ.set('4')
+     pitch.set('19.74')
+     padx.set('120')
+     pady.set('12')
+     paddrill.set('0')
+     rowx.set(value="100")
+     rowy.set(value="100")
+     padshape.set('R')
+     firstpinsquare.set(False)
+     locking.set(False)
+     padtype.set('SMD')
+     #Default Settings only For test
+     if _debug_message==1:
+       modname.set('quad')
+       PIN_N.set('32')
+       rowx.set(value="600")
+       rowy.set(value="600")
+       padx.set('150')
+       pady.set('20')
+       pitch.set('50')
+       PIN_N_HORIZ.set('4')
+  draw()
+############################################################################  
 def autoname():
   """ To Automatically Generate the Name,Description,RefDes,
       and Keywords for the Component
   """
   if len(modname.get())!=0:
     try:
+      Validate()
+      if er != "ok":    
+         print "Error In " + er
+         return
       # Check for Berg Connector Single Row
       f = re.match("^(.)*(CONN)",modname.get().upper())
-      if f!=None and package.get()=="SIP":
-        Validate()
-        if er != "ok":    
-            print "Error In " + er
-            return
+      if f!=None and package.get()=="SIP":        
         refdes.set("J")#Set the Ref
         #Decription & Keyword
         dec="Connector "+PIN_N.get()+"Pin "
@@ -374,60 +948,103 @@ def autoname():
         modname.set(key.split(" ")[1])
     except:
       pass
-
+############################################################################
 def Draw_MainPane(fr):
   """To Generate the Content for the Main Input Frame"""
   global modname,refdes,package,pitch,padx,pady,\
          paddrill,padshape,firstpinsquare,locking,padtype,PIN_N,\
-         description,keywords
-  Label(fr,text="Module Name:")\
-          .grid(column=0,row=0,padx=2,pady=2,sticky=N+E)
-  #modname=StringVar(value="Mod_Name")
-  modname=StringVar(value="CONN")
-  Entry(fr,textvar=modname,width=20)\
-          .grid(column=1,row=0,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+         description,keywords,rowx,rowx_e,rowx_en,rowx_di,\
+         rowy,rowy_e,rowy_en,rowy_di,\
+         PIN_N_HORIZ,PIN_N_HORIZ_e,PIN_N_HORIZ_en,PIN_N_HORIZ_di
 
-  Label(fr,text="Reference Designator:")\
-          .grid(column=0,row=1,padx=2,pady=2,sticky=N+E)
-  refdes=StringVar(value="Ref_Des")
-  Entry(fr,textvar=refdes,width=20)\
-          .grid(column=1,row=1,columnspan=2,padx=2,pady=2,sticky=N+W+E)
-  
   Label(fr,text="Package:")\
-          .grid(column=0,row=3,padx=2,pady=2,sticky=N+E)
+          .grid(column=0,row=0,padx=2,pady=2,sticky=N+E)
   package=StringVar()
   pack=ttk.Combobox(fr,width=10,state="readonly",\
-          values=['SIP'],textvariable=package)
+          values=['SIP','DIP','CONN-Dual','QUAD'],textvariable=package)
   pack.current(0)
-  pack.grid(column=1,row=3,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+  pack.bind("<<ComboboxSelected>>",package_cmb_update)
+  pack.grid(column=1,row=0,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+  
+  Label(fr,text="Module Name:")\
+          .grid(column=0,row=1,padx=2,pady=2,sticky=N+E)
+  modname=StringVar(value="Mod_Name")
+  Entry(fr,textvar=modname,width=20)\
+          .grid(column=1,row=1,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+
+  Label(fr,text="Reference Designator:")\
+          .grid(column=0,row=2,padx=2,pady=2,sticky=N+E)
+  refdes=StringVar(value="Ref_Des")
+  Entry(fr,textvar=refdes,width=20)\
+          .grid(column=1,row=2,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+
+  Label(fr,text="Number of Pins:")\
+          .grid(column=0,row=3,padx=2,pady=2,sticky=N+E)
+  PIN_N=StringVar(value="8")
+  Entry(fr,textvar=PIN_N,width=20)\
+          .grid(column=1,row=3,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+  
+  Label(fr,text="Number of Pins Horizonally:")\
+          .grid(column=0,row=4,padx=2,pady=2,sticky=N+E)
+  PIN_N_HORIZ=StringVar(value="0")
+  PIN_N_HORIZ_e = Entry(fr,textvar=PIN_N_HORIZ,width=20)
+  PIN_N_HORIZ_en = lambda: \
+    PIN_N_HORIZ_e.grid(column=1,row=4,columnspan=2,\
+              padx=2,pady=2,sticky=N+W+E)
+  PIN_N_HORIZ_di = lambda: \
+    PIN_N_HORIZ_e.grid_forget()
+  PIN_N_HORIZ_en()
+  PIN_N_HORIZ_di()
 
   Label(fr,text="All Units must be in Mils",anchor="center",\
           font=("Arial",10,"bold"))\
-          .grid(column=0,row=4,columnspan=3,padx=2,pady=2,sticky=N+E+W)
+          .grid(column=0,row=5,columnspan=3,padx=2,pady=2,sticky=N+E+W)
   
   Label(fr,text="Pitch:")\
-          .grid(column=0,row=5,padx=2,pady=2,sticky=N+E)
+          .grid(column=0,row=6,padx=2,pady=2,sticky=N+E)
   pitch=StringVar(value="100")
   Entry(fr,textvar=pitch,width=20)\
-          .grid(column=1,row=5,columnspan=2,padx=2,pady=2,sticky=N+W+E)
-  
-  Label(fr,text="Pad Dimension X:")\
-          .grid(column=0,row=6,padx=2,pady=2,sticky=N+E)
-  padx=StringVar(value="70")
-  Entry(fr,textvar=padx,width=20)\
           .grid(column=1,row=6,columnspan=2,padx=2,pady=2,sticky=N+W+E)
   
-  Label(fr,text="Pad Dimension Y:")\
+  Label(fr,text="Pad Dimension X:")\
           .grid(column=0,row=7,padx=2,pady=2,sticky=N+E)
-  pady=StringVar(value="70")
-  Entry(fr,textvar=pady,width=20)\
+  padx=StringVar(value="70")
+  Entry(fr,textvar=padx,width=20)\
           .grid(column=1,row=7,columnspan=2,padx=2,pady=2,sticky=N+W+E)
   
-  Label(fr,text="Pad Drill Diameter:")\
+  Label(fr,text="Pad Dimension Y:")\
           .grid(column=0,row=8,padx=2,pady=2,sticky=N+E)
+  pady=StringVar(value="70")
+  Entry(fr,textvar=pady,width=20)\
+          .grid(column=1,row=8,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+  
+  Label(fr,text="Pad Drill Diameter:")\
+          .grid(column=0,row=9,padx=2,pady=2,sticky=N+E)
   paddrill=StringVar(value="35")
   Entry(fr,textvar=paddrill,width=20)\
-          .grid(column=1,row=8,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+          .grid(column=1,row=9,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+
+  Label(fr,text="Pin Row Spacing X:")\
+          .grid(column=0,row=10,padx=2,pady=2,sticky=N+E)
+  rowx=StringVar(value="0")
+  rowx_e = Entry(fr,textvar=rowx,width=20)
+  rowx_en = lambda: \
+    rowx_e.grid(column=1,row=10,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+  rowx_di = lambda: \
+    rowx_e.grid_forget()
+  rowx_en()
+  rowx_di()
+
+  Label(fr,text="Pin Row Spacing Y:")\
+          .grid(column=0,row=11,padx=2,pady=2,sticky=N+E)
+  rowy=StringVar(value="0")
+  rowy_e = Entry(fr,textvar=rowy,width=20)
+  rowy_en = lambda: \
+    rowy_e.grid(column=1,row=11,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+  rowy_di = lambda: \
+    rowy_e.grid_forget()
+  rowy_en()
+  rowy_di()
   
   padshp_lb=ttk.Labelframe(fr,text="Pad Shape",padding=2)
   padshape=StringVar(value="C")
@@ -437,16 +1054,17 @@ def Draw_MainPane(fr):
           .grid(column=1,row=0,sticky=N+W+S)
   Radiobutton(padshp_lb,text="Oblong",variable=padshape,value="O")\
           .grid(column=3,row=0,sticky=N+W+S)
-  padshp_lb.grid(column=0,row=9,columnspan=3,padx=2,pady=2,sticky=N+W+E)
+  padshp_lb.grid(column=0,row=12,columnspan=3,padx=2,pady=2,sticky=N+W+E)
 
   firstpinsquare = BooleanVar()
   Checkbutton(fr,text="First Pin Square",variable=firstpinsquare,\
-           onvalue=True).grid(column=0,row=10,padx=2,pady=2,sticky=N+W+S)
+           onvalue=True,command=draw)\
+           .grid(column=0,row=13,padx=2,pady=2,sticky=N+W+S)
   
   locking = BooleanVar()
   Checkbutton(fr,text="Self Locking Formation",\
-     variable=locking,onvalue=True)\
-     .grid(column=1,row=10,padx=2,pady=2,columnspan=2,sticky=N+W+S)
+     variable=locking,onvalue=True,command=draw)\
+     .grid(column=1,row=13,padx=2,pady=2,columnspan=2,sticky=N+W+S)
 
   padtyp_lb=ttk.Labelframe(fr,text="Pad Type",padding=2)
   padtype=StringVar(value="STD")
@@ -454,26 +1072,20 @@ def Draw_MainPane(fr):
           .grid(column=0,row=0,sticky=N+W+S)
   Radiobutton(padtyp_lb,text="SMD",variable=padtype,value="SMD")\
           .grid(column=1,row=0,sticky=N+W+S)  
-  padtyp_lb.grid(column=0,row=11,columnspan=3,padx=2,pady=2,sticky=N+W+E)
-
-  Label(fr,text="Number of Pins:")\
-          .grid(column=0,row=12,padx=2,pady=2,sticky=N+E)
-  PIN_N=StringVar(value="8")
-  Entry(fr,textvar=PIN_N,width=20)\
-          .grid(column=1,row=12,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+  padtyp_lb.grid(column=0,row=14,columnspan=3,padx=2,pady=2,sticky=N+W+E)
   
   Label(fr,text="Description:")\
-          .grid(column=0,row=13,padx=2,pady=2,sticky=N+E)
+          .grid(column=0,row=15,padx=2,pady=2,sticky=N+E)
   description=StringVar(value="Description")
   Entry(fr,textvar=description,width=40)\
-          .grid(column=1,row=13,columnspan=2,padx=2,pady=2,sticky=N+W+E)
+          .grid(column=1,row=15,columnspan=2,padx=2,pady=2,sticky=N+W+E)
   
   Label(fr,text="Keywords:")\
-          .grid(column=0,row=14,padx=2,pady=2,sticky=N+E)
+          .grid(column=0,row=16,padx=2,pady=2,sticky=N+E)
   keywords=StringVar(value="Key1 Key_2")
   Entry(fr,textvar=keywords,width=20)\
-          .grid(column=1,row=14,columnspan=2,padx=2,pady=2,sticky=N+W+E)
-
+          .grid(column=1,row=16,columnspan=2,padx=2,pady=2,sticky=N+W+E)  
+############################################################################
 def Draw_ConvertPane(fr):
   """To Generate the Content for the Converter Frame"""
   Label(fr,text="mm to Mil Converter",justify="center")\
@@ -519,17 +1131,19 @@ def Draw_ConvertPane(fr):
       
   Button(fr,text="Convert",command=lambda:handler1(mm1,mil1))\
           .grid(column=3,row=6,padx=2,pady=2,sticky=N+W+E+S)
-
+############################################################################
 def Draw_PicturePane(fr):
   """To Generate the Content for the Picture Frame"""
+  global canvas
   canvas = Canvas(fr,width=200,height=200,background="white")
   canvas.pack(fill=BOTH)
-
+############################################################################
 def Draw_CommandPane(fr):
   """To Generate the Content for the Command & Buttons Frame"""
   status = StringVar(value="""Designed by: A.D.H.A.R Labs Research,Bharat(India)
 Abhijit Bose( info@adharlabs.in )
-http://m8051.blogspot.com""")
+http://m8051.blogspot.com
+License:CC BY-NC-SA 3.0""")
   Label(fr,text="",textvariable=status)\
         .grid(column=0,row=0,rowspan=2,padx=40,pady=2,sticky=N+E+W+S)
 
@@ -551,6 +1165,7 @@ http://m8051.blogspot.com""")
   
 ############################################################################
 # Main FUNCTION>
+############################################################################
 if __name__ == "__main__" :
   #{
   global meta       
@@ -559,7 +1174,8 @@ if __name__ == "__main__" :
   print __doc__
   ## Create Main Window
   root = Tk()
-  root.title("Module Generator by A.D.H.A.R Labs Research,Bharat(India)")  
+  root.title("Kicad Module Generator v"+__version__+\
+             " by A.D.H.A.R Labs Research,Bharat(India) ")  
   root.bind("<Escape>",lambda e:root.destroy())
   root["padx"]=10
   root["pady"]=10
@@ -578,7 +1194,7 @@ if __name__ == "__main__" :
   data_frm2 = Frame(content,width=200,height=200,borderwidth=3,\
                     relief="ridge",padx=2,pady=2)
   Draw_PicturePane(data_frm2)
-  data_frm2.grid(column=1,row=0,padx=5,pady=5,sticky=N+W+E)
+  data_frm2.grid(column=1,row=0,padx=5,pady=5,sticky=N+W+E+S)
   #    } DATA FRAME 2 END
   #    { DATA FRAME 3 BEGIN
   data_frm3 = Frame(content,width=200,height=200,borderwidth=3,\
@@ -592,7 +1208,10 @@ if __name__ == "__main__" :
   data_frm4.grid(column=0,row=2,columnspan=2,padx=5,pady=5,sticky=N+W+E+S)
   #    } DATA FRAME 4 END
   content.grid(column=0,row=0,sticky=N+S+E+W)
+  # Update all Data
+  package_cmb_update(None)
   #  }
   ## Main Loop Start
   root.mainloop()
   #}
+############################################################################

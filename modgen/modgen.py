@@ -2,7 +2,7 @@
 ############################################################################
 ############################################################################
 """
-##  modgen - Module Generator Program for Kicad PCBnew V0.3
+##  modgen - Module Generator Program for Kicad PCBnew V0.4
 ## 
 ##  Designed by
 ##         A.D.H.A.R Labs Research,Bharat(India)
@@ -33,7 +33,13 @@
 ##          -- Logical GUI Re-arrangements and improvements
 ##          -- Custom value Population using Package type selection
 ##          -- Automatic Picture Dispay for Package & Configurations
-##
+## version 0.4 - (2012-04-27)
+##          -- Automatic unit Conversion support 
+##          -- Units support for MM
+##          -- Automatic Name, Description and Keywords Generation
+##              for SIP,DIP,CONN-Dual packages with support
+##              for MM and Mils nameing
+##          
 ## TODO:
 ## - Automatic Name Generation
 ## - Add Lib Gen Capability
@@ -49,7 +55,7 @@ from Tkinter import *
 ############################################################################
 __author__ = "Abhijit Bose(info@adharlabs.in)"
 __author_email__="info@adharlabs.in"
-__version__ = "0.3"
+__version__ = "0.4"
 ############################################################################    
 #DEBUG> Print Additional Debug Messages
 #  if needed make _debug_message = 1
@@ -91,6 +97,7 @@ At %(padtype)s N %(layermask)s
 Ne 0 ""
 Po %(pinx)s %(piny)s
 $EndPAD"""
+
 ############################################################################
 #FORMAT FUNCTIONS>
 ############################################################################
@@ -366,6 +373,42 @@ def MakePads(pins,meta):
 ############################################################################
 #GUI FUNCTIONS>
 ############################################################################
+def mmtomil(mm):
+  ''' Function to convert the mm into mils even when its a string
+     and return accordingly '''
+  global er
+  s = 0
+  if (type(mm) == type(" ")):
+    try:
+      mm = float(mm)
+      s = 1
+    except:
+      er = "Unit Conversion Fault"
+      return 0
+  mil = mm * 1000/25.4
+  if s==1:
+    mil = "%f"%mil
+  er = "ok"
+  return mil
+############################################################################
+def miltomm(mil):
+  ''' Function to convert the mils into mm even when its a string
+     and return accordingly '''
+  global er
+  s = 0
+  if (type(mil) == type(" ")):
+    try:
+      mil = float(mil)
+      s = 1
+    except:
+      er = "Unit Conversion Fault"
+      return 0
+  mm = mil * 25.4/1000
+  if s==1:
+    mm = "%f"%mm
+  er = "ok"
+  return mm
+############################################################################
 def Validate():
   """To Validate the GUI Inputs"""
   global er
@@ -374,29 +417,43 @@ def Validate():
   try:
     k = float(pitch.get())*1.0
     er = "ok"
-    if(k<=0):
+    if (k<=0 or k>=400) and units.get()=="mils":
       tkMessageBox.showerror("Error","Invalid Pitch Value")        
       er = "pitch"
       pitch.set("100")
       return 1
+    elif (k<=0 or k>=10) and units.get()=="mm":
+      tkMessageBox.showerror("Error","Invalid Pitch Value")        
+      er = "pitch"
+      pitch.set("2.54")
+      return 1
   except:    
     tkMessageBox.showerror("Error","Invalid Pitch Value")        
     er = "pitch"
-    pitch.set("100")
+    if units.get()=="mm":
+      pitch.set("2.54")
+    else:
+      pitch.set("100")
     return 1
   # Check Padx
   try:
     k = float(padx.get())*1.0
     er = "ok"
-    if(k<=0):
+    if (k<=0):
       tkMessageBox.showerror("Error","Invalid Pad X Value")        
       er = "padx"
-      padx.set("70")
+      if units.get()=="mils":
+        padx.set("70")
+      else:
+        padx.set("1.778")
       return 1
   except:    
     tkMessageBox.showerror("Error","Invalid Pad X Value")        
     er = "padx"
-    padx.set("70")
+    if units.get()=="mils":
+      padx.set("70")
+    else:
+      padx.set("1.778")
     return 1
   # Check Pady
   try:
@@ -405,28 +462,42 @@ def Validate():
     if(k<=0):
       tkMessageBox.showerror("Error","Invalid Pad Y Value")        
       er = "pady"
-      pady.set("70")
+      if units.get()=="mils":
+        pady.set("70")
+      else:
+        pady.set("1.778")
       return 1
   except:    
     tkMessageBox.showerror("Error","Invalid Pad Y Value")        
     er = "pady"
-    pady.set("70")
+    if units.get()=="mils":
+      pady.set("70")
+    else:
+      pady.set("1.778")
     return 1
   # Check Pad Drill
   try:
     k = float(paddrill.get())*1.0
     er = "ok"
-    if(k<=10 or k>250) and padtype.get()=='STD':
+    if(k<=10 or k>250) and padtype.get()=='STD'and units.get()=="mils":
       tkMessageBox.showerror("Error","Invalid Pad Drill Value")        
       er = "paddrill"
       paddrill.set("35")
+      return 1
+    elif(k<=0.254 or k>6.1) and padtype.get()=='STD'and units.get()=="mm":
+      tkMessageBox.showerror("Error","Invalid Pad Drill Value")        
+      er = "paddrill"
+      paddrill.set(".889")
       return 1
     #elif padtype.get()=='SMD':#Allow Even Drils if needed
     #  paddrill.set("0")
   except:    
     tkMessageBox.showerror("Error","Invalid Pad Drill Value")        
     er = "paddrill"
-    paddrill.set("35")
+    if units.get() == "mils":
+      paddrill.set("35")
+    else:
+      paddrill.set(".889")
     return 1
   # Check Pin N
   try:
@@ -454,7 +525,10 @@ def Validate():
     if (k<=0) and (package.get() in ['DIP','CONN-Dual']):
       tkMessageBox.showerror("Error","Invalid Row X Spacing")        
       er = "RowX"
-      rowx.set("10")
+      if units.get() == "mils":
+        rowx.set("10")
+      else:
+        rowx.set("0.254")
       return 1
   except:    
     tkMessageBox.showerror("Error","Invalid Row X Spacing")        
@@ -467,7 +541,10 @@ def Validate():
     if (k<=0) and (package.get() in ['QUAD']):
       tkMessageBox.showerror("Error","Invalid Row Y Spacing")        
       er = "RowY"
-      rowy.set("10")
+      if units.get() == "mils":
+        rowy.set("10")
+      else:
+        rowy.set("0.254")
       return 1
   except:    
     tkMessageBox.showerror("Error","Invalid Row Y Spacing")        
@@ -506,8 +583,34 @@ def Validate():
   #At the End Return
   return 1
 ############################################################################
+def autouintadjust():
+  ''' Automatically adjust the units as per selection '''
+  try:
+    if units.get() == "mm":#Preivious was Mils    
+      pitch.set(miltomm(pitch.get()))
+      padx.set(miltomm(padx.get()))
+      pady.set(miltomm(pady.get()))
+      paddrill.set(miltomm(paddrill.get()))
+      rowx.set(miltomm(rowx.get()))
+      rowy.set(miltomm(rowy.get()))
+    if units.get() == "mils":#Preivious was mm
+      pitch.set(mmtomil(pitch.get()))
+      padx.set(mmtomil(padx.get()))
+      pady.set(mmtomil(pady.get()))
+      paddrill.set(mmtomil(paddrill.get()))
+      rowx.set(mmtomil(rowx.get()))
+      rowy.set(mmtomil(rowy.get()))
+  except:
+    print 'Error in Unit Conversion'
+    tkMessageBox.showerror("Error","Error in Unit Conversion")
+############################################################################
 def packed():
   """To Pack the GUI inputs to the XML form"""
+  #Convert to Mils as all processing is in mils
+  if units.get() == "mm":
+    units.set("mils")
+    autouintadjust()
+  #Run Validation Check
   Validate()  
   if er != "ok":    
     print "Error In " + er
@@ -562,7 +665,7 @@ def packed():
     meta["rowy"] = None
     meta["PIN_N_HORIZ"] = None
     meta["PIN_N_VERT"] = None
-
+  #Generate the Pad description
   meta["pads"]=MakePads(pins,meta)
   print template_pcb%meta
   name = meta["modname"]
@@ -581,6 +684,7 @@ def packed():
   return 1
 ############################################################################
 def draw():
+  '''Draw Pictures depending on Package and configuration'''
   canvas.delete("all")
   if package.get() == 'SIP':
     canvas.create_rectangle(40,40,160,80,width=3)
@@ -804,6 +908,9 @@ def draw():
 ############################################################################  
 def package_cmb_update(event):
   """To Update Options when the Screen is Activated"""
+  units.set("mils")
+  description.set("")
+  keywords.set("")
   if package.get() == 'SIP':
      rowx_di()
      rowy_di()
@@ -830,7 +937,7 @@ def package_cmb_update(event):
      padx.set('150')
      pady.set('60')
      paddrill.set('39.37')
-     rowx.set(value="100")
+     rowx.set(value="300")
      padshape.set('O')
      firstpinsquare.set(False)
      locking.set(False)
@@ -886,75 +993,152 @@ def autoname():
       and Keywords for the Component
   """
   if len(modname.get())!=0:
-    try:
+##    try:
       Validate()
       if er != "ok":    
          print "Error In " + er
          return
       # Check for Berg Connector Single Row
       f = re.match("^(.)*(CONN)",modname.get().upper())
-      if f!=None and package.get()=="SIP":        
+      g = re.match(\
+          "^(.)*((?:DIP)|(?:SOIC)|(?:SSOP)|(?:TSSOP)|(?:MSOP))"\
+          ,modname.get().upper())
+      h = re.match("^(.)*(CONN2X)",modname.get().upper())
+      
+      #Get the Parameters and Format them
+      if units.get()=="mm":
+        pich = "%2.2f"%(float(pitch.get()))
+        x = ("%2.2f"%(float(padx.get())))
+        y = ("%2.2f"%(float(pady.get())))
+        dril = ("%2.2f"%(float(paddrill.get())))
+        rox = "%2.2f"%(float(rowx.get()))
+      else:
+        pich = "%d"%(float(pitch.get()))
+        x = ("%d"%(float(padx.get())))
+        y = ("%d"%(float(pady.get())))
+        dril = ("%d"%(float(paddrill.get())))
+        rox = "%d"%(float(rowx.get()))
+
+      #Templates for Automatic Nameing
+      template_desc_pcb ="""%(name)s %(pin)sPin%(rowx1)s%(fix)s %(pitch)s Pitch \
+%(pad)s Pad %(drill)s %(shape)s %(type)s"""
+      template_keyw_pcb ="""%(name)s%(pin)s_%(fix)s %(name)s%(pin)s_%(fix)s_\
+%(pitch)s %(name)s%(pin)s%(rowx1)s_%(fix)s_%(pitch)s_%(pad)s\
+_%(drill)s%(shape)s%(type)s"""
+      desc = {}
+      keys = {}
+
+      #Common Generation Stub
+      desc["pin"] = PIN_N.get()
+      keys["pin"] = PIN_N.get()
+
+      if padtype.get()=="STD":
+        desc["fix"]="Through Hole"
+        keys["fix"]="TH"
+      else:
+        desc["fix"]="SMD"
+        keys["fix"]="SMD"
+        
+      desc["pitch"] = pich
+      keys["pitch"] = pich
+
+      if x != y:
+        desc["pad"] = x+"X"+y        
+        keys["pad"] = x+"X"+y
+      else:
+        desc["pad"] = x        
+        keys["pad"] = x
+          
+      if padshape.get() =='O':
+         desc["shape"] = "Oblong"
+         keys["shape"] = "O"           
+      elif padshape.get() =='R':
+         desc["shape"] = "Rectangular"
+         keys["shape"] = "R"
+      else:
+         desc["shape"] = "Circular"
+         keys["shape"] = "C"
+          
+      if padtype.get()=="STD":
+        desc["drill"] = dril+ " Drill"
+        keys["drill"] = dril + "_"
+      else:
+        desc["drill"] = ""
+        keys["drill"] = ""
+          
+      #Validate As per packages
+      if f!=None and package.get()=="SIP":
         refdes.set("J")#Set the Ref
-        #Decription & Keyword
-        dec="Connector "+PIN_N.get()+"Pin "
-        key="CONN"+("%d"%int(PIN_N.get()))
-        #Add Pad Type
-        if padtype.get()=="STD":
-           dec = dec + " Through Hole "
-           key = key + "_TH"
+        
+        desc["name"] = f.group(2)
+        keys["name"] = f.group(2)
+        
+        desc["rowx1"] = " "
+        keys["rowx1"] = ""
+
+        if locking.get():  
+          desc["type"] = "Locking"
+          keys["type"] = "L"
         else:
-           dec = dec + " SMD "
-           key = key + "_SMD"          
-        key = key + " " + key
-        #Add Pitch
-        pich = "%2.2f"%(float(pitch.get())*25.4/1000)
-        dec = dec + pich+"mm Pitch"
-        key = key + "_" +"".join(pich.split("."))
-        #Add Pads
-        if float(padx.get())==float(pady.get()):
-           dec = dec + " " + padx.get() +" Pad "
-           key = key + "_" + ("%d"%float(padx.get()))
-        else:
-           dec = dec + " " + padx.get() +"X"+pady.get()+ " Pad "
-           key = key + "_" + ("%d"%float(padx.get()))+\
-                 "X"+("%d"%int(pady.get()))
-        #Add Drill
-        if padtype.get()=="STD":
-           dec = dec + paddrill.get()+" Drill"
-           key = key + "X" + ("%d"%float(paddrill.get()))
-        #Add Pad Shape Spec  
-        if padshape.get() =='O':
-           dec = dec + " Oblong "
-           key = key +"_O"
-           if locking.get():
-             dec = dec + " Locking"
-             key = key +"L"
-        elif padshape.get() =='R':
-           dec = dec + " Spc "
-           key = key +"_R"
-           if locking.get():
-              dec = dec + " Locking"
-              key = key +"L"
-        else:
-           if locking.get():
-              dec = dec + " Locking"
-              key = key +"_L"
-           else:
-              dec = dec + " Normal"
-              key = key +"_N"
-        #Assign to Fileds
+          desc["type"] = "Normal"
+          keys["type"] = "N"
+
+        dec = template_desc_pcb % desc
+        key = template_keyw_pcb % keys
+                
         description.set(dec)
         keywords.set(key)
-        modname.set(key.split(" ")[1])
-    except:
-      pass
+        modname.set(key.split(" ")[2])
+        
+      elif g!=None and package.get()=='DIP':
+        refdes.set("U")#Set the Ref
+        
+        desc["name"] = g.group(2)
+        keys["name"] = g.group(2)
+        
+        desc["rowx1"] = " " + rox + " Spacing "
+        keys["rowx1"] = "_" + rox
+
+        desc["type"] = ""
+        keys["type"] = ""
+          
+        dec = template_desc_pcb % desc
+        key = template_keyw_pcb % keys
+        
+        description.set(dec)
+        keywords.set(key)
+        modname.set(key.split(" ")[2])
+
+      elif h!=None and package.get()=='CONN-Dual':
+        refdes.set("J")#Set the Ref
+        
+        desc["name"] = h.group(2)[:4]
+        keys["name"] = h.group(2)[:4]
+
+        desc["pin"] = "%d"%(int(PIN_N.get())/2)
+        keys["pin"] = "%d"%(int(PIN_N.get())/2)
+        
+        desc["rowx1"] = " Dual Row " + rox + " Spacing "
+        keys["rowx1"] = "_" + rox
+
+        desc["type"] = ""
+        keys["type"] = ""
+          
+        dec = template_desc_pcb % desc
+        key = template_keyw_pcb % keys
+        
+        description.set(dec)
+        keywords.set(key)
+        modname.set(key.split(" ")[2])
+##    except:
+##      pass
 ############################################################################
 def Draw_MainPane(fr):
   """To Generate the Content for the Main Input Frame"""
   global modname,refdes,package,pitch,padx,pady,\
          paddrill,padshape,firstpinsquare,locking,padtype,PIN_N,\
          description,keywords,rowx,rowx_e,rowx_en,rowx_di,\
-         rowy,rowy_e,rowy_en,rowy_di,\
+         rowy,rowy_e,rowy_en,rowy_di,units,\
          PIN_N_HORIZ,PIN_N_HORIZ_e,PIN_N_HORIZ_en,PIN_N_HORIZ_di
 
   Label(fr,text="Package:")\
@@ -996,9 +1180,13 @@ def Draw_MainPane(fr):
   PIN_N_HORIZ_en()
   PIN_N_HORIZ_di()
 
-  Label(fr,text="All Units must be in Mils",anchor="center",\
-          font=("Arial",10,"bold"))\
-          .grid(column=0,row=5,columnspan=3,padx=2,pady=2,sticky=N+E+W)
+  units_lb = ttk.Labelframe(fr,text="Units",padding=2)
+  units =StringVar(value="mils")
+  Radiobutton(units_lb,text="Mils",variable=units,value="mils"\
+              ,command=autouintadjust).grid(column=0,row=0,sticky=N+W+E)
+  Radiobutton(units_lb,text="MM",variable=units,value="mm"\
+              ,command=autouintadjust).grid(column=1,row=0,sticky=N+W+E)
+  units_lb.grid(column=0,row=5,columnspan=3,padx=2,pady=2,sticky=N+W+E)
   
   Label(fr,text="Pitch:")\
           .grid(column=0,row=6,padx=2,pady=2,sticky=N+E)

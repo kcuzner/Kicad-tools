@@ -22,7 +22,8 @@ for this tool is also available.
 ![Picture](https://github.com/AdharLabs/Kicad-tools/raw/master/modgen/modgenui.PNG)
 
 
-**Dependency: This works on Python 2.7 and Higher version only**
+**Dependency: This works on Python 2.7 and Higher version only
+(For Ubuntu/Debian Linux Need to install python-tk package)**
 
 
 Designed By
@@ -72,6 +73,16 @@ version 0.3 - (2012-03-24)
  *   Custom value Population using Package type selection
 
  *   Automatic Picture Dispay for Package & Configurations
+
+
+version 0.4 - (2012-04-27)
+
+ *   Automatic unit Conversion support for MM & Mils
+
+ *   Units support for MM in design
+
+ *   Automatic Name, Description and Keywords Generation 
+for SIP,DIP,CONN-Dual packages with support for MM and Mils nameing
 
 
 Limitation in Present Design

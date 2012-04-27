@@ -23,6 +23,7 @@ for this tool is also available.
 
 
 **Dependency: This works on Python 2.7 and Higher version only
+
 (For Ubuntu/Debian Linux Need to install python-tk package)**
 
 
@@ -87,9 +88,15 @@ for SIP,DIP,CONN-Dual packages with support for MM and Mils nameing
 
 Limitation in Present Design
 -----------------------------
-Need to add Further useful automatic Name Generation.
+
+ * Need to integrate library generation.
+
+ * Add option to Load the data from file to fill in the component details
+
 
 Dependency: This works on Python 2.7 and Higher version only
+
+(For Ubuntu/Debian Linux Need to install python-tk package)
 
 
 License

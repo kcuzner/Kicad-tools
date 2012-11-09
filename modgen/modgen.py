@@ -48,8 +48,8 @@
 ############################################################################
 #IMPORTS>
 ############################################################################
-import xml.dom.minidom,re,sys,os,ttk,tkMessageBox
-from Tkinter import *
+import xml.dom.minidom,re,sys,os,tkinter.ttk,tkinter.messagebox
+from tkinter import *
 ############################################################################
 #EXPORT>
 ############################################################################
@@ -128,7 +128,7 @@ def MetaData(comp):
   "Extract the component description parameters (common to all pins)"
   el = comp.getElementsByTagName("module")[0]
   d = {}
-  for name, value in el.attributes.items() :
+  for name, value in list(el.attributes.items()) :
     d[name] = value
   return d
 ############################################################################
@@ -368,7 +368,7 @@ def MakePads(pins,meta):
     return MakePads_CONN_Dual(pins,meta)
   elif meta["package"]=='QUAD':
     return MakePads_QUAD(pins,meta)
-  print "Error: Un Supported Package"
+  print("Error: Un Supported Package")
   exit(0)
 ############################################################################
 #GUI FUNCTIONS>
@@ -418,17 +418,17 @@ def Validate():
     k = float(pitch.get())*1.0
     er = "ok"
     if (k<=0 or k>=400) and units.get()=="mils":
-      tkMessageBox.showerror("Error","Invalid Pitch Value")        
+      tkinter.messagebox.showerror("Error","Invalid Pitch Value")        
       er = "pitch"
       pitch.set("100")
       return 1
     elif (k<=0 or k>=10) and units.get()=="mm":
-      tkMessageBox.showerror("Error","Invalid Pitch Value")        
+      tkinter.messagebox.showerror("Error","Invalid Pitch Value")        
       er = "pitch"
       pitch.set("2.54")
       return 1
   except:    
-    tkMessageBox.showerror("Error","Invalid Pitch Value")        
+    tkinter.messagebox.showerror("Error","Invalid Pitch Value")        
     er = "pitch"
     if units.get()=="mm":
       pitch.set("2.54")
@@ -440,7 +440,7 @@ def Validate():
     k = float(padx.get())*1.0
     er = "ok"
     if (k<=0):
-      tkMessageBox.showerror("Error","Invalid Pad X Value")        
+      tkinter.messagebox.showerror("Error","Invalid Pad X Value")        
       er = "padx"
       if units.get()=="mils":
         padx.set("70")
@@ -448,7 +448,7 @@ def Validate():
         padx.set("1.778")
       return 1
   except:    
-    tkMessageBox.showerror("Error","Invalid Pad X Value")        
+    tkinter.messagebox.showerror("Error","Invalid Pad X Value")        
     er = "padx"
     if units.get()=="mils":
       padx.set("70")
@@ -460,7 +460,7 @@ def Validate():
     k = float(pady.get())*1.0
     er = "ok"
     if(k<=0):
-      tkMessageBox.showerror("Error","Invalid Pad Y Value")        
+      tkinter.messagebox.showerror("Error","Invalid Pad Y Value")        
       er = "pady"
       if units.get()=="mils":
         pady.set("70")
@@ -468,7 +468,7 @@ def Validate():
         pady.set("1.778")
       return 1
   except:    
-    tkMessageBox.showerror("Error","Invalid Pad Y Value")        
+    tkinter.messagebox.showerror("Error","Invalid Pad Y Value")        
     er = "pady"
     if units.get()=="mils":
       pady.set("70")
@@ -480,19 +480,19 @@ def Validate():
     k = float(paddrill.get())*1.0
     er = "ok"
     if(k<=10 or k>250) and padtype.get()=='STD'and units.get()=="mils":
-      tkMessageBox.showerror("Error","Invalid Pad Drill Value")        
+      tkinter.messagebox.showerror("Error","Invalid Pad Drill Value")        
       er = "paddrill"
       paddrill.set("35")
       return 1
     elif(k<=0.254 or k>6.1) and padtype.get()=='STD'and units.get()=="mm":
-      tkMessageBox.showerror("Error","Invalid Pad Drill Value")        
+      tkinter.messagebox.showerror("Error","Invalid Pad Drill Value")        
       er = "paddrill"
       paddrill.set(".889")
       return 1
     #elif padtype.get()=='SMD':#Allow Even Drils if needed
     #  paddrill.set("0")
   except:    
-    tkMessageBox.showerror("Error","Invalid Pad Drill Value")        
+    tkinter.messagebox.showerror("Error","Invalid Pad Drill Value")        
     er = "paddrill"
     if units.get() == "mils":
       paddrill.set("35")
@@ -504,17 +504,17 @@ def Validate():
     k = int(PIN_N.get())*1
     er = "ok"
     if(k<=1):
-      tkMessageBox.showerror("Error","Invalid Number of Pins")        
+      tkinter.messagebox.showerror("Error","Invalid Number of Pins")        
       er = "PIN_N"
       PIN_N.set("8")
       return 1
     if (k%2)!=0 and (package.get() in ['DIP','CONN-Dual']):
-      tkMessageBox.showerror("Error","Invalid Number of Pins")        
+      tkinter.messagebox.showerror("Error","Invalid Number of Pins")        
       er = "PIN_N"
       PIN_N.set("8")
       return 1
   except:    
-    tkMessageBox.showerror("Error","Invalid Number of Pins")        
+    tkinter.messagebox.showerror("Error","Invalid Number of Pins")        
     er = "PIN_N"
     PIN_N.set("8")
     return 1
@@ -523,7 +523,7 @@ def Validate():
     k = float(rowx.get())*1
     er = "ok"
     if (k<=0) and (package.get() in ['DIP','CONN-Dual']):
-      tkMessageBox.showerror("Error","Invalid Row X Spacing")        
+      tkinter.messagebox.showerror("Error","Invalid Row X Spacing")        
       er = "RowX"
       if units.get() == "mils":
         rowx.set("10")
@@ -531,7 +531,7 @@ def Validate():
         rowx.set("0.254")
       return 1
   except:    
-    tkMessageBox.showerror("Error","Invalid Row X Spacing")        
+    tkinter.messagebox.showerror("Error","Invalid Row X Spacing")        
     er = "RowX"
     return 1
   # Check Row Y
@@ -539,7 +539,7 @@ def Validate():
     k = float(rowy.get())*1
     er = "ok"
     if (k<=0) and (package.get() in ['QUAD']):
-      tkMessageBox.showerror("Error","Invalid Row Y Spacing")        
+      tkinter.messagebox.showerror("Error","Invalid Row Y Spacing")        
       er = "RowY"
       if units.get() == "mils":
         rowy.set("10")
@@ -547,7 +547,7 @@ def Validate():
         rowy.set("0.254")
       return 1
   except:    
-    tkMessageBox.showerror("Error","Invalid Row Y Spacing")        
+    tkinter.messagebox.showerror("Error","Invalid Row Y Spacing")        
     er = "RowY"
     return 1
   # Check PIN_N_HORIZ
@@ -555,12 +555,12 @@ def Validate():
     k = int(PIN_N_HORIZ.get())*1
     er = "ok"
     if (k<=0) and (package.get() in ['QUAD']):
-      tkMessageBox.showerror("Error","Invalid Number of Pins Horizontally")        
+      tkinter.messagebox.showerror("Error","Invalid Number of Pins Horizontally")        
       er = "PIN_N_HORIZ"
       PIN_N_HORIZ.set("%d"%(int(PIN_N.get())/4))
       return 1
   except:    
-    tkMessageBox.showerror("Error","Invalid Number of Pins Horizontally")        
+    tkinter.messagebox.showerror("Error","Invalid Number of Pins Horizontally")        
     er = "PIN_N_HORIZ"
     return 1
   #Check The Description
@@ -571,12 +571,12 @@ def Validate():
     keywords.set(modname.get())  
   #Check the Oblong Selection PadY>Padx
   if(float(padx.get())==float(pady.get())) and padshape.get()=='O':
-    tkMessageBox.showerror("Error","Incorrect Pad Dimensions for Oblong pads")
+    tkinter.messagebox.showerror("Error","Incorrect Pad Dimensions for Oblong pads")
     er = "Oblong Pad Shape"
     return 1
   #Check the Circle Selection PadY=Padx
   if(float(padx.get())!=float(pady.get())) and padshape.get()=='C':
-    tkMessageBox.showerror("Error",\
+    tkinter.messagebox.showerror("Error",\
       "Incorrect Pad Dimensions for Circular pads")
     er = "Circular Pad Shape"
     return 1
@@ -601,8 +601,8 @@ def autouintadjust():
       rowx.set(mmtomil(rowx.get()))
       rowy.set(mmtomil(rowy.get()))
   except:
-    print 'Error in Unit Conversion'
-    tkMessageBox.showerror("Error","Error in Unit Conversion")
+    print('Error in Unit Conversion')
+    tkinter.messagebox.showerror("Error","Error in Unit Conversion")
 ############################################################################
 def packed():
   """To Pack the GUI inputs to the XML form"""
@@ -613,74 +613,74 @@ def packed():
   #Run Validation Check
   Validate()  
   if er != "ok":    
-    print "Error In " + er
+    print("Error In " + er)
     return 0
-  print "Module Name: " + modname.get()
+  print("Module Name: " + modname.get())
   meta["modname"] = modname.get()
-  print "Reference Designator: " + refdes.get()
+  print("Reference Designator: " + refdes.get())
   meta["refname"] = refdes.get()
-  print "Package: " + package.get()
+  print("Package: " + package.get())
   meta["package"] = package.get()
-  print "Pitch: " + pitch.get()
+  print("Pitch: " + pitch.get())
   meta["pitch"] = pitch.get()
-  print "Pad x Dimension: " + padx.get()
+  print("Pad x Dimension: " + padx.get())
   meta["padx"] = padx.get()
-  print "Pad y Dimension: " + pady.get()
+  print("Pad y Dimension: " + pady.get())
   meta["pady"] = pady.get()
-  print "Pad Drill Diameter: " + paddrill.get()
+  print("Pad Drill Diameter: " + paddrill.get())
   meta["paddrill"] = paddrill.get()
-  print "Pad Shape: "+ padshape.get()
+  print("Pad Shape: "+ padshape.get())
   meta["padshape"] = padshape.get()
-  print "First Pad Square: " + ("True" if firstpinsquare.get() else "False")
+  print("First Pad Square: " + ("True" if firstpinsquare.get() else "False"))
   meta["firstpadsquare"] = 1 if firstpinsquare.get() else None
-  print "Self Locking Pattern: " + ("True" if locking.get() else "False")
+  print("Self Locking Pattern: " + ("True" if locking.get() else "False"))
   meta["locking"] = "5" if locking.get() else None
-  print "Pad Type: " + padtype.get()
+  print("Pad Type: " + padtype.get())
   meta["padtype"] = padtype.get()
   if padtype.get() == 'STD':
     meta["padlayermask"]='00E0FFFF' #normally for STD 
   else:
     meta["padlayermask"]='00888000' #notmally for SMD
-  print "Number of Pins: " + PIN_N.get()
+  print("Number of Pins: " + PIN_N.get())
   meta["PIN_N"] = PIN_N.get()
   pins = PinGen(int(meta["PIN_N"]))
-  print "Description for Module: " + description.get()
+  print("Description for Module: " + description.get())
   meta["description"] = description.get()
-  print "Keywords for Module: " + keywords.get()
+  print("Keywords for Module: " + keywords.get())
   meta["keywords"] = keywords.get()
   if meta["package"] in ['DIP','CONN-Dual','QUAD']:
-    print "Pin Row Spacing X:" + rowx.get()
+    print("Pin Row Spacing X:" + rowx.get())
     meta["rowx"] = rowx.get()
   else:
     meta["rowx"] = None
   if meta["package"] =='QUAD':
-    print "Pin Row Spacing Y:" + rowy.get()
+    print("Pin Row Spacing Y:" + rowy.get())
     meta["rowy"] = rowy.get()
-    print "Number of Pins Horizontally: " + PIN_N_HORIZ.get()
+    print("Number of Pins Horizontally: " + PIN_N_HORIZ.get())
     meta["PIN_N_HORIZ"] = PIN_N_HORIZ.get()
     meta["PIN_N_VERT"] = "%d"%(\
       (int(PIN_N.get())-(int(PIN_N_HORIZ.get())*2))/2)
-    print "Number of Pins Vertically: " + meta["PIN_N_VERT"]
+    print("Number of Pins Vertically: " + meta["PIN_N_VERT"])
   else:
     meta["rowy"] = None
     meta["PIN_N_HORIZ"] = None
     meta["PIN_N_VERT"] = None
   #Generate the Pad description
   meta["pads"]=MakePads(pins,meta)
-  print template_pcb%meta
+  print(template_pcb%meta)
   name = meta["modname"]
   if(locking.get()) and package.get() == 'SIP':
     name = name+"_LOCK"
   name = name+".emp"
-  ans = tkMessageBox.askokcancel("File Wite",\
+  ans = tkinter.messagebox.askokcancel("File Wite",\
         "Do you want to wite "+name+" for the Module?")
   if(ans):
     fl = open(name,"w")
     fl.write(template_pcb%meta)
     fl.close()
-    tkMessageBox.showinfo("Module Generator",\
+    tkinter.messagebox.showinfo("Module Generator",\
       "Module "+meta["modname"]+" Written Successfully!!")
-    print " Module "+name+" written successfully"
+    print(" Module "+name+" written successfully")
   return 1
 ############################################################################
 def draw():
@@ -996,7 +996,7 @@ def autoname():
 ##    try:
       Validate()
       if er != "ok":    
-         print "Error In " + er
+         print("Error In " + er)
          return
       # Check for Berg Connector Single Row
       f = re.match("^(.)*(CONN)",modname.get().upper())
@@ -1144,7 +1144,7 @@ def Draw_MainPane(fr):
   Label(fr,text="Package:")\
           .grid(column=0,row=0,padx=2,pady=2,sticky=N+E)
   package=StringVar()
-  pack=ttk.Combobox(fr,width=10,state="readonly",\
+  pack=tkinter.ttk.Combobox(fr,width=10,state="readonly",\
           values=['SIP','DIP','CONN-Dual','QUAD'],textvariable=package)
   pack.current(0)
   pack.bind("<<ComboboxSelected>>",package_cmb_update)
@@ -1180,7 +1180,7 @@ def Draw_MainPane(fr):
   PIN_N_HORIZ_en()
   PIN_N_HORIZ_di()
 
-  units_lb = ttk.Labelframe(fr,text="Units",padding=2)
+  units_lb = tkinter.ttk.Labelframe(fr,text="Units",padding=2)
   units =StringVar(value="mils")
   Radiobutton(units_lb,text="Mils",variable=units,value="mils"\
               ,command=autouintadjust).grid(column=0,row=0,sticky=N+W+E)
@@ -1234,7 +1234,7 @@ def Draw_MainPane(fr):
   rowy_en()
   rowy_di()
   
-  padshp_lb=ttk.Labelframe(fr,text="Pad Shape",padding=2)
+  padshp_lb=tkinter.ttk.Labelframe(fr,text="Pad Shape",padding=2)
   padshape=StringVar(value="C")
   Radiobutton(padshp_lb,text="Circle",variable=padshape,value="C")\
           .grid(column=0,row=0,sticky=N+W+S)
@@ -1254,7 +1254,7 @@ def Draw_MainPane(fr):
      variable=locking,onvalue=True,command=draw)\
      .grid(column=1,row=13,padx=2,pady=2,columnspan=2,sticky=N+W+S)
 
-  padtyp_lb=ttk.Labelframe(fr,text="Pad Type",padding=2)
+  padtyp_lb=tkinter.ttk.Labelframe(fr,text="Pad Type",padding=2)
   padtype=StringVar(value="STD")
   Radiobutton(padtyp_lb,text="Through Hole",variable=padtype,value="STD")\
           .grid(column=0,row=0,sticky=N+W+S)
@@ -1359,7 +1359,7 @@ if __name__ == "__main__" :
   global meta       
          
   meta = {}
-  print __doc__
+  print(__doc__)
   ## Create Main Window
   root = Tk()
   root.title("Kicad Module Generator v"+__version__+\
@@ -1370,7 +1370,7 @@ if __name__ == "__main__" :
   #  { MAIN CONTENT BEGIN
   content = Frame(root,width=300,height=200,borderwidth=2,relief="groove")
   #    { DATAFRAME 1 BEGIN
-  note = ttk.Notebook(content,padding=2)
+  note = tkinter.ttk.Notebook(content,padding=2)
   data_frm1 = Frame(note,width=200,height=200,borderwidth=3,\
                     relief="ridge",padx=2,pady=2)
   Draw_MainPane(data_frm1)

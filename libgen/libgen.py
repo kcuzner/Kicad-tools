@@ -101,7 +101,7 @@ def MetaData(comp):
   "Extract the component description parameters (common to all pins)"
   el = comp.getElementsByTagName("component")[0]
   d = {}
-  for name, value in el.attributes.items() :
+  for name, value in list(el.attributes.items()) :
     d[name] = value
   return d
 ############################################################################
@@ -109,11 +109,11 @@ def MetaData(comp):
 def GetTemplate_DIP(pins, d) :
   #{ Begin of DIP
     """ Generator Function for the DIP Package"""
-    print ">Working for DIP or PDIP Package"
+    print(">Working for DIP or PDIP Package")
     # Count the Number of pins
     pl = len(pins)
     if (pl%2)!=0:
-      print "Package has odd number of pins"
+      print("Package has odd number of pins")
       sys.exit(-1)
     # Split the Pin array in Two parts
     left_p = pins[:pl/2]
@@ -164,7 +164,7 @@ def GetTemplate_DIP(pins, d) :
 def GetTemplate_SIP(pins, d) :
   #{ Begin SIP
     """ Generator Function for the SIP Package"""
-    print ">Working for SIP Package"
+    print(">Working for SIP Package")
     # Count the Number of pins
     pl = len(pins)
     # Height dependant on Number of Pins Spaced at 100mil
@@ -204,11 +204,11 @@ def GetTemplate_SIP(pins, d) :
 def GetTemplate_CONN(pins, d) :
   #{ Begin CONN
     """ Generator Function for the CONN Package"""
-    print ">Working for CONN Package"
+    print(">Working for CONN Package")
     # Count the Number of pins
     pl = len(pins)
     if (pl%2)!=0:
-      print "Package has odd number of pins"
+      print("Package has odd number of pins")
       sys.exit(-1)
     # Height dependant on Number of Pins Spaced at 100mil
     height = (pl/2+1)*100
@@ -258,11 +258,11 @@ def GetTemplate_CONN(pins, d) :
 def GetTemplate_QUAD(pins, d) :
   #{ Begin QUAD
     """ Generator Function for the QUAD Package"""
-    print ">Working for QUAD Package"
+    print(">Working for QUAD Package")
     # Count the Number of pins
     pl = len(pins)
     if (pl%4)!=0:
-      print "Package does not have pins in multiples of 4"
+      print("Package does not have pins in multiples of 4")
       sys.exit(-1)    
     # Width for the body according to Pin String
     wdiff = max([len(i[0]) for i in pins] )*50
@@ -342,7 +342,7 @@ def GetTemplate_QUAD(pins, d) :
 def GetTemplateDict(pins, d) :
   """Get the Kicad format lib file"""
   if not (d["package"] in ["DIP","PDIP","SIP","CONN","QUAD"]):
-    print "Unsupported package"
+    print("Unsupported package")
     sys.exit(-1)
   if (d["package"] == "DIP") or (d["package"] == "PDIP"):
     d = GetTemplate_DIP(pins, d)
@@ -375,7 +375,7 @@ def GetDcmDict(d):
 ############################################################################
 #OTHER FUNCTIONS>
 def Help_xml2lib():
-  print """Usage: %s <spec file> [<lib file>]
+  print("""Usage: %s <spec file> [<lib file>]
   
 Where <spec file> is a file containing the PIN descriptions
 and <lib file> is the name of the generated component description.
@@ -483,7 +483,7 @@ QUAD -
             |   |   ..   |   |
             |   |   ..   |   |
         
-"""%os.path.split(sys.argv[0])[1]
+"""%os.path.split(sys.argv[0])[1])
   sys.exit(-1)
 ############################################################################
 #Processing FUNCTION>
@@ -495,7 +495,7 @@ def xml2lib(srcxmlfile,destlibfile):
   # Read Meta Data
   meta = MetaData(xmlcomp)  
   if _debug_message==1:
-      print meta
+      print(meta)
   #Check for Existance of a Generic Parameter
   try:
     meta["PIN_N"]
@@ -507,29 +507,29 @@ def xml2lib(srcxmlfile,destlibfile):
   else:
     pins = PinDescriptions(xmlcomp)
   if _debug_message==1:
-      print pins
+      print(pins)
   # Create the Translation Dictionary
   d = GetTemplateDict(pins, meta)
   if _debug_message==1:
-    print d
+    print(d)
   # Agument the Dictionary with DCM Parameters as well
   d = GetDcmDict(d)
   # Apply the Formatting on Lib Template
   out = template_lib%d
-  print out
+  print(out)
   # Apply Optional Dcm Template
   outdcm =""
   if d["dk"] != "":
     outdcm = template_dcm%d
-    print outdcm
+    print(outdcm)
   # Write The File
   file(destlibfile,"w").write(out)
-  print "File %s written"%destlibfile
+  print("File %s written"%destlibfile)
   # If Description exist the write the DCM
   if outdcm != "":
     dcmfl = re.match("(.*)\..*",destlibfile).group(1)+".dcm"
     file(dcmfl,"w").write(outdcm)
-    print "File %s written"%dcmfl 
+    print("File %s written"%dcmfl) 
   #} End of Lib Gen
   
 ############################################################################
@@ -551,10 +551,10 @@ if __name__ == "__main__" :
     else:
       destfl = srcfl + ".lib"      
   # Print the Introduction
-  print __doc__
-  print "Source File> "+srcfl
-  print "Destination File> "+destfl
-  print
+  print(__doc__)
+  print("Source File> "+srcfl)
+  print("Destination File> "+destfl)
+  print()
   # Process the files
   xml2lib(srcfl,destfl)
   

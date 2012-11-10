@@ -278,10 +278,10 @@ def GetTemplate_QUAD(pins, d) :
     d["refname_y"] = str(0)
     d["compname_y"] = str(-100)
     # Segment the Pins into 4 parts
-    left_p = pins[:pl/4]
-    bottom_p = pins[pl/4:pl/2]
-    right_p = pins[pl/2:3*pl/4]
-    top_p =pins[3*pl/4:]
+    left_p = pins[:int(pl/4)]
+    bottom_p = pins[int(pl/4):int(pl/2)]
+    right_p = pins[int(pl/2):int(3*pl/4)]
+    top_p =pins[int(3*pl/4):]
     # Make the Box Parameter
     d["box"] = "S %d %d %d %d 0 1 0 N"%(left,top,right,bottom)
     # Pin Length for SIP
@@ -523,12 +523,14 @@ def xml2lib(srcxmlfile,destlibfile):
     outdcm = template_dcm%d
     print(outdcm)
   # Write The File
-  file(destlibfile,"w").write(out)
+  with open(destlibfile,"w") as f:
+        f.write(out)
   print("File %s written"%destlibfile)
   # If Description exist the write the DCM
   if outdcm != "":
     dcmfl = re.match("(.*)\..*",destlibfile).group(1)+".dcm"
-    file(dcmfl,"w").write(outdcm)
+    with open(dcmfl,"w") as f:
+        f.write(outdcm)
     print("File %s written"%dcmfl) 
   #} End of Lib Gen
   

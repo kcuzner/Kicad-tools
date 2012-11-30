@@ -421,7 +421,7 @@ N: NOT CONNECTED
 Additionally if no pin names are needed then PIN_N="<Number of Pins>"
 needs to be used. The created pins would have PASSIVE electrical Type.
 Example.
-<component refname="J" compname="MOLEX_8" package="SIL" PIN_N="8">
+<component refname="J" compname="MOLEX_8" package="SIP" PIN_N="8">
 </component>
 
 Schematics Symbol Packages:-

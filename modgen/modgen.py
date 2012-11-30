@@ -186,7 +186,7 @@ def MakePads_DIP(pins,meta):
   pin = {}
   pitch = float(meta["pitch"]) * 10
   #Set First Half of the Pins
-  for i in range(0,len(pins)/2):
+  for i in range(0,int(len(pins)/2)):
     pin["piny"]="%d"%(y)
     pin["pinx"]="%d"%(x)
     y = y + pitch
@@ -204,7 +204,7 @@ def MakePads_DIP(pins,meta):
   x = float(meta["rowx"])*10
   y = y - pitch
   #Set Second Half of the Pins
-  for i in range(len(pins)/2,len(pins)):
+  for i in range(int(len(pins)/2),len(pins)):
     pin["piny"]="%d"%(y)
     pin["pinx"]="%d"%(x)
     y = y - pitch

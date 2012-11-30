@@ -116,8 +116,8 @@ def GetTemplate_DIP(pins, d) :
       print("Package has odd number of pins")
       sys.exit(-1)
     # Split the Pin array in Two parts
-    left_p = pins[:pl/2]
-    right_p = pins[pl/2:]
+    left_p = pins[:int(pl/2)]
+    right_p = pins[int(pl/2):]
     # Height dependant on Number of Pins Spaced at 100mil
     height = (len(left_p)+1)*100
     # Width for the body according to Pin String

@@ -39,6 +39,8 @@
 ##          -- Automatic Name, Description and Keywords Generation
 ##              for SIP,DIP,CONN-Dual packages with support
 ##              for MM and Mils nameing
+## version 3.0.1 - (2012-11-30)
+##          -- Upgraded to python 3
 ##          
 ## TODO:
 ## - Automatic Name Generation
